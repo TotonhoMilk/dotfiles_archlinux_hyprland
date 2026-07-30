@@ -6,6 +6,8 @@
 #         ░▀░▀░░▀░░▀░░░▀░▀░▀▀▀░▀░▀░▀▀▀░░▀░░▀░▀░▀▀▀░▀▀▀
 # ===============================================================
 
+START_TIME=$(date +%s)
+
 # ===============================================================
 # Pacotes para instalação
 # ===============================================================
@@ -40,9 +42,43 @@ notices() {
   echo -e "${BLUE}=============================================================${NC}"
 }
 
+exit_script() {
+  local END_TIME=$(date +%s)
+  local ELAPSED=$((END_TIME - START_TIME))
+
+  local HORAS=$((ELAPSED / 3600))
+  local MINUTOS=$(((ELAPSED % 3600) / 60))
+  local SEGUNDOS=$((ELAPSED % 60))
+
+  local MESSAGE="${1:-"Operação finalizada!"}"
+
+  local SHOULD_EXIT="${2:-false}"
+
+  clear
+  echo -e "${BLUE}=============================================================${NC}"
+  echo -e "${GREEN}\t\t${MESSAGE}"
+  echo -e "\t\tFeito com ❤️ por TotonhoMilk"
+  echo -ne "\t\tTempo de execução: "
+
+  if [ "$HORAS" -gt 0 ]; then
+    echo -e "${HORAS}h${MINUTOS}m${SEGUNDOS}s"
+  elif [ "$MINUTOS" -gt 0 ]; then
+    echo -e "${MINUTOS}m${SEGUNDOS}s"
+  else
+    echo -e "${SEGUNDOS}s"
+  fi
+
+  echo -e "${BLUE}=============================================================${NC}"
+
+  if [ "$SHOULD_EXIT" = true ] || [ "$SHOULD_EXIT" = "1" ]; then
+    exit 0
+  fi
+}
+
 confirmation() {
   echo
   local awnser
+
   while true; do
     read -r -p "$(echo -e "${YELLOW}$1 [S/n]: ${NC}")" awnser
 
@@ -58,6 +94,21 @@ confirmation() {
       ;;
     esac
   done
+}
+
+instalation_countdown() {
+  clear
+  echo -ne "${NC}\tIniciando em"
+  for i in {5..0}; do
+    for j in {1..3}; do
+      sleep 0.25
+      echo -n "."
+    done
+    sleep 0.25
+    echo -n "$i"
+  done
+  sleep 0.3
+  clear
 }
 
 internet_test() {
@@ -92,9 +143,7 @@ internet_test() {
         if confirmation "\tDeseja tentar conectar novamente?"; then
           continue
         else
-          clear
-          notices "\tInstalação cancelada pelo usuário."
-          exit 0
+          exit_script "Operação cancelada pelo Usuário!" true
         fi
       fi
 
@@ -169,25 +218,29 @@ configure_git() {
       if confirmation "\tDeseja tentar novamente?"; then
         continue
       else
-        clear
-        notices "\tInstalação cancelada pelo usuário."
-        exit 0
+        exit_script "Operação cancelada pelo Usuário!" true
       fi
     fi
   done
 
   if [ ! -d "$HOME/.dotfiles" ]; then
-    git clone https://github.com/TotonhoMilk/dotfiles_archlinux_hyprland.git ~/.dotfiles
+    echo -e "${GREEN} ==> Clonando o repositório de dotfiles. . .${NC}"
+    git clone https://github.com/TotonhoMilk/dotfiles_archlinux_hyprland.git "$HOME/.dotfiles"
   else
-    echo -e "${RED} ==> O diretório ~/.dotfiles já existe${NC}"
+    echo -e "${RED} ==> O diretório $HOME/.dotfiles já existe${NC}"
     echo -e "${GREEN} ==> Atualizando o repositório${NC}"
-    git -C ~/.dotfiles pull
+
+    if ! git -C "$HOME/.dotfiles" pull; then
+      echo -e "${RED} ==> Erro ao atualizar o repositório via git pull!${NC}"
+    else
+      echo -e "${GREEN} ==> Arquivos atualizados com sucesso!${NC}"
+    fi
   fi
 }
 
 configure_greetd() {
-  chmod 755 $HOME
-  chmod 755 $HOME/.dotfiles
+  chmod 755 "$HOME"
+  chmod 755 "$HOME/.dotfiles"
   sudo usermod -aG video,render greeter
 
   if [ -f /etc/greetd/config.toml ]; then
@@ -272,13 +325,13 @@ welcome_animation() {
     printf "\t\t┃ ┃┃ ┃┏━┃┏━┃┛┏━ ┏━┛━┏┛┏━┃┃  ┃  \n"
     printf "\t\t┏━┃━┏┛┏━┛┏┏┛┃┃ ┃━━┃ ┃ ┏━┃┃  ┃  \n"
     printf "\t\t┛ ┛ ┛ ┛  ┛ ┛┛┛ ┛━━┛ ┛ ┛ ┛━━┛━━┛${NC}\n"
-    sleep 0.5
+    sleep 0.33
 
     printf "\033[3;1H${GREEN}"
     printf "\t\t║ ║║ ║╔═║╔═║╝╔═ ╔═╝═╔╝╔═║║  ║  \n"
     printf "\t\t╔═║═╔╝╔═╝╔╔╝║║ ║══║ ║ ╔═║║  ║  \n"
     printf "\t\t╝ ╝ ╝ ╝  ╝ ╝╝╝ ╝══╝ ╝ ╝ ╝══╝══╝${NC}\n"
-    sleep 0.5
+    sleep 0.33
   done
 }
 
@@ -311,11 +364,11 @@ read -r -p "$(echo -e "${YELLOW}\tDigite qualquer tecla para continuar. . .${NC}
 kill "$ANIM_PID" 2>/dev/null
 wait "$ANIM_PID" 2>/dev/null
 
+tput civis
+
+instalation_countdown
+
 tput cnorm
-
-clear
-
-sleep 1
 
 notices "\tSua senha de root poderá ser solicitada. . ."
 
@@ -334,7 +387,7 @@ if confirmation "\tDeseja prosseguir com a instalação?"; then
   notices "\tInstalando Stackbase de vídeo e som"
   install_pkg "${VIDEO_SOM[@]}"
 
-  notices "\tInstalando os componentes básicos do Hyperland"
+  notices "\tInstalando os componentes básicos do Hyprland"
   install_pkg "${HYPRLAND[@]}"
 
   notices "\tInstalando o QuickShell e componentes do QT6"
@@ -382,9 +435,16 @@ if confirmation "\tDeseja prosseguir com a instalação?"; then
   notices "\tConfigurando a Kitty"
   configure_kitty
 
-  notices "\tInstalação concluída com sucesso!"
-else
   clear
-  notices "\tInstalação cancelada pelo usuário."
-  exit 0
+  echo -e "${GREEN} ==> Todas as etapas de instalação foram concluídas!${NC}\n"
+
+  if confirmation "Deseja reiniciar o computador agora?"; then
+    echo -e "${YELLOW}Reiniciando o sistema. . .${NC}"
+    sleep 2
+    reboot
+  else
+    exit_script "Instalação concluída com sucesso!" true
+  fi
+else
+  exit_script "Operação cancelada pelo Usuário!" true
 fi
