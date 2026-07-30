@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 
 # ===============================================================
+#         ░█░█░█░█░█▀█░█▀▄░▀█▀░█▀█░█▀▀░▀█▀░█▀█░█░░░█░░
+#         ░█▀█░░█░░█▀▀░█▀▄░░█░░█░█░▀▀█░░█░░█▀█░█░░░█░░
+#         ░▀░▀░░▀░░▀░░░▀░▀░▀▀▀░▀░▀░▀▀▀░░▀░░▀░▀░▀▀▀░▀▀▀
+# ===============================================================
+
+# ===============================================================
 # Pacotes para instalação
 # ===============================================================
 VIDEO_SOM=(pipewire pipewire-pulse pipewire-alsa wireplumber xdg-desktop-portal xdg-desktop-portal-hyprland)
@@ -26,6 +32,7 @@ NC='\033[0m'
 # ===============================================================
 # Funções de instalação e configuração
 # ===============================================================
+
 notices() {
   echo
   echo -e "${BLUE}=============================================================${NC}"
@@ -100,7 +107,7 @@ internet_test() {
   done
 
   echo
-  echo -e "${GREEN}${BLINK} ==> Conexão com a internet confirmada!${NC}"
+  echo -e "${GREEN}${BLINK} ==> ${NC}${GREEN}Conexão com a internet confirmada!${NC}"
 }
 
 configure_yay() {
@@ -188,7 +195,7 @@ configure_greetd() {
   fi
 
   sudo mkdir -p /var/cache/tuigreet
-  sudo shown -R greeter:greeter /var/cache/tuigreet
+  sudo chown -R greeter:greeter /var/cache/tuigreet
 
   cd "$HOME/.dotfiles" || exit 1
   sudo stow -t / greetd
@@ -245,10 +252,71 @@ configure_kitty() {
   cd "$HOME/.dotfiles" || exit 1
   stow kitty
 }
+
+configure_nvim() {
+  if [ -d "$HOME/.config/nvim" ] || [ -L "$HOME/.config/nvim" ]; then
+    rm -rf "$HOME/.config/nvim"
+    rm -rf "$HOME/.local/state/nvim"
+    rm -rf "$HOME/.cache/nvim"
+  fi
+
+  cd "$HOME/.dotfiles" || exit 1
+  stow nvim
+}
+
+welcome_animation() {
+  trap 'tput cnorm; exit' TERM INT EXIT
+
+  while true; do
+    printf "\033[3;1H${GREEN}"
+    printf "\t\t┃ ┃┃ ┃┏━┃┏━┃┛┏━ ┏━┛━┏┛┏━┃┃  ┃  \n"
+    printf "\t\t┏━┃━┏┛┏━┛┏┏┛┃┃ ┃━━┃ ┃ ┏━┃┃  ┃  \n"
+    printf "\t\t┛ ┛ ┛ ┛  ┛ ┛┛┛ ┛━━┛ ┛ ┛ ┛━━┛━━┛${NC}\n"
+    sleep 0.5
+
+    printf "\033[3;1H${GREEN}"
+    printf "\t\t║ ║║ ║╔═║╔═║╝╔═ ╔═╝═╔╝╔═║║  ║  \n"
+    printf "\t\t╔═║═╔╝╔═╝╔╔╝║║ ║══║ ║ ╔═║║  ║  \n"
+    printf "\t\t╝ ╝ ╝ ╝  ╝ ╝╝╝ ╝══╝ ╝ ╝ ╝══╝══╝${NC}\n"
+    sleep 0.5
+  done
+}
+
+welcome_text() {
+  echo
+  echo -e "${BLUE}
+  Esse script de instalação do Hyprland e pacotes derivados.
+  para maior garantia de sucesso, realize uma instalação nova 
+  do archlinux, utilizando o script archinstall no mínimo.
+  ${NC}"
+}
+
 # ===============================================================
 # Execução do script
 # ===============================================================
+trap 'tput cnorm' EXIT
+
 clear
+welcome_animation &
+ANIM_PID=$!
+
+printf "\033[8;1H"
+
+tput civis
+
+welcome_text
+
+echo
+read -r -p "$(echo -e "${YELLOW}\tDigite qualquer tecla para continuar. . .${NC}")" -n 1
+kill "$ANIM_PID" 2>/dev/null
+wait "$ANIM_PID" 2>/dev/null
+
+tput cnorm
+
+clear
+
+sleep 1
+
 notices "\tSua senha de root poderá ser solicitada. . ."
 
 internet_test
@@ -266,7 +334,7 @@ if confirmation "\tDeseja prosseguir com a instalação?"; then
   notices "\tInstalando Stackbase de vídeo e som"
   install_pkg "${VIDEO_SOM[@]}"
 
-  notices "\tIntalando os componentes básicos do Hyperland"
+  notices "\tInstalando os componentes básicos do Hyperland"
   install_pkg "${HYPRLAND[@]}"
 
   notices "\tInstalando o QuickShell e componentes do QT6"
