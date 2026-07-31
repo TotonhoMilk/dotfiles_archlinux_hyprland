@@ -435,6 +435,9 @@ if confirmation "\tDeseja prosseguir com a instalação?"; then
   notices "\tConfigurando a Kitty"
   configure_kitty
 
+  notices "\tConfigurando a Neovim"
+  configure_nvim
+
   clear
   echo -e "${GREEN} ==> Todas as etapas de instalação foram concluídas!${NC}\n"
 
